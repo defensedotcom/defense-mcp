@@ -12,7 +12,7 @@ This MCP server enables AI assistants to access real-time threat intelligence fr
 
 - **Python 3.8+**
 - **Defense.com API Token** - Generate from your [Defense.com Portal](https://my.defense.com)
-- **MCP-compatible client** (Claude Desktop, OpenAI with MCP, etc.)
+- **MCP-compatible client** ([Claude Desktop[(https://claude.ai/download)], OpenAI with MCP, etc.)
 - **UV package manager** (optional, for `mcp install` command)
 
 ## 🚀 Installation & Setup
@@ -21,8 +21,8 @@ This MCP server enables AI assistants to access real-time threat intelligence fr
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/defense-mcp-server.git
-cd defense-mcp-server
+git clone https://github.com/defensedotcom/defense-mcp.git
+cd defense-mcp
 
 # Create and activate virtual environment (recommended)
 python3 -m venv .venv
