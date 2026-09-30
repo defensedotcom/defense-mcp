@@ -138,6 +138,13 @@ python defense_mcp.py
 
 > 🔑 **Getting your API Token**: Log into your Defense.com Portal → Account → API Keys → Add API Key
 
+### 🔄 Rotating Your API Key
+
+When rotating or renewing your `DEFENSE_API_TOKEN`:
+1. Update `DEFENSE_API_TOKEN` with your new token in `claude_desktop_config.json` (or your `.env` file).
+2. Save the configuration file.
+3. **Restart Claude Desktop completely**: MCP server sub-processes inherit environment variables when launched. Claude Desktop must be fully closed and reopened for the new API token to take effect. If not restarted, requests will continue using the old/revoked token and fail with `401 Unauthorized`.
+
 ### Verifying Installation
 
 Once installed and configured correctly, you should see the Defense MCP server available in Claude Desktop:
@@ -387,10 +394,11 @@ The server includes comprehensive training templates for:
 - Ensure server logs show no errors: `python defense_mcp.py`
 - Verify MCP CLI is installed: `pip list | grep mcp`
 
-**Authentication Errors**
+**Authentication Errors (HTTP 401)**
 - Regenerate your API token from Defense.com Portal
 - Ensure token has read permissions for threat data
 - Verify the API base URL is correct
+- If you recently rotated or changed your API token, **fully restart Claude Desktop** to reload environment variables
 
 **Tools Not Showing in Claude**
 - Confirm "Defense MCP" appears in the tools menu

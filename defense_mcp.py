@@ -158,6 +158,14 @@ class DefenseClient:
             logger.error("API request timed out")
             raise RuntimeError("Defense API request timed out - please try again")
         except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                resp_text = (e.response.text or "").lower()
+                if "revoked" in resp_text or "expired" in resp_text:
+                    error_detail = "Your API key was rejected (revoked or expired). Please update DEFENSE_API_TOKEN in your connector settings and restart Claude Desktop."
+                else:
+                    error_detail = "Authentication failed (401). If you recently updated your DEFENSE_API_TOKEN, please fully restart Claude Desktop for the change to take effect."
+                logger.error(f"HTTP error 401: {e.response.text} - {error_detail}")
+                raise RuntimeError(error_detail) from e
             logger.error(f"HTTP error ({e.response.status_code}): {e.response.text}")
             raise
         except Exception as e:
@@ -185,6 +193,14 @@ class DefenseClient:
             if e.response.status_code == 404:
                 logger.debug(f"Threat {threat_id} not found")
                 return None
+            if e.response.status_code == 401:
+                resp_text = (e.response.text or "").lower()
+                if "revoked" in resp_text or "expired" in resp_text:
+                    error_detail = "Your API key was rejected (revoked or expired). Please update DEFENSE_API_TOKEN in your connector settings and restart Claude Desktop."
+                else:
+                    error_detail = "Authentication failed (401). If you recently updated your DEFENSE_API_TOKEN, please fully restart Claude Desktop for the change to take effect."
+                logger.error(f"HTTP error 401: {e.response.text} - {error_detail}")
+                raise RuntimeError(error_detail) from e
             logger.error(f"HTTP error ({e.response.status_code}): {e.response.text}")
             raise
         except httpx.TimeoutException:
@@ -366,7 +382,11 @@ async def get_biggest_risks() -> Dict[str, Any]:
     except httpx.HTTPStatusError as e:
         error_msg = f"API request failed: {e.response.status_code}"
         if e.response.status_code == 401:
-            error_msg += " - Please check your API token"
+            resp_text = (e.response.text or "").lower()
+            if "revoked" in resp_text or "expired" in resp_text:
+                error_msg += " - Your API key was rejected (revoked or expired). Please update DEFENSE_API_TOKEN in your connector settings and restart Claude Desktop."
+            else:
+                error_msg += " - Please check your API token. If you recently updated your token, remember to fully restart Claude Desktop for the change to take effect."
         elif e.response.status_code == 403:
             error_msg += " - API token lacks required permissions"
         logger.error(error_msg)
