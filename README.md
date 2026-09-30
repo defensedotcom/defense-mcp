@@ -211,6 +211,15 @@ If you prefer using UV or the `mcp install` command generated a UV-based configu
 }
 ```
 
+### Rotating your API key
+
+When rotating or updating your `DEFENSE_API_TOKEN`:
+
+1. Update the token in your Claude Desktop configuration file (`claude_desktop_config.json`).
+2. **Fully quit and restart Claude Desktop** on every machine or connector configured.
+
+> ⚠️ **Important**: Claude Desktop launches the MCP server as a background subprocess and injects environment variables only once at spawn time. A running server process cannot detect environment variable changes in the background and will continue using the previous token in memory until Claude Desktop is fully restarted to spawn a fresh process.
+
 ## 🛠️ Available Tools
 
 <details>
@@ -391,6 +400,7 @@ The server includes comprehensive training templates for:
 - Regenerate your API token from Defense.com Portal
 - Ensure token has read permissions for threat data
 - Verify the API base URL is correct
+- If rotating or updating your key, fully quit and restart Claude Desktop so the MCP server process reloads with the new token
 
 **Tools Not Showing in Claude**
 - Confirm "Defense MCP" appears in the tools menu

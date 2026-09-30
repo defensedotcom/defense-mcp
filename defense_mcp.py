@@ -158,6 +158,13 @@ class DefenseClient:
             logger.error("API request timed out")
             raise RuntimeError("Defense API request timed out - please try again")
         except httpx.HTTPStatusError as e:
+            if getattr(e, "response", None) is not None and e.response.status_code == 401:
+                resp_text = (getattr(e.response, "text", "") or "").lower()
+                if "revoked" in resp_text or "expired" in resp_text:
+                    logger.error(
+                        "API key was rejected (revoked or expired) - "
+                        "update it in the connector settings and restart Claude Desktop"
+                    )
             logger.error(f"HTTP error ({e.response.status_code}): {e.response.text}")
             raise
         except Exception as e:
@@ -185,6 +192,13 @@ class DefenseClient:
             if e.response.status_code == 404:
                 logger.debug(f"Threat {threat_id} not found")
                 return None
+            if getattr(e, "response", None) is not None and e.response.status_code == 401:
+                resp_text = (getattr(e.response, "text", "") or "").lower()
+                if "revoked" in resp_text or "expired" in resp_text:
+                    logger.error(
+                        "API key was rejected (revoked or expired) - "
+                        "update it in the connector settings and restart Claude Desktop"
+                    )
             logger.error(f"HTTP error ({e.response.status_code}): {e.response.text}")
             raise
         except httpx.TimeoutException:
@@ -282,6 +296,23 @@ def parse_rfc3339_date(date_string: str) -> Optional[datetime]:
             logger.debug(f"Could not parse date: {date_string}")
             return None
 
+def format_http_error_message(e: httpx.HTTPStatusError) -> str:
+    """Format an HTTP error status with actionable diagnostics."""
+    response = getattr(e, "response", None)
+    status_code = response.status_code if response is not None else "unknown"
+    error_msg = f"API request failed: {status_code}"
+    
+    if status_code == 401:
+        resp_text = (getattr(response, "text", "") or "").lower()
+        if "revoked" in resp_text or "expired" in resp_text:
+            error_msg += " - Your API key was rejected (revoked or expired) - update it in the connector settings and restart Claude Desktop"
+        else:
+            error_msg += " - Please check your API token"
+    elif status_code == 403:
+        error_msg += " - API token lacks required permissions"
+        
+    return error_msg
+
 _client_lock = asyncio.Lock()
 
 async def get_defense_client():
@@ -305,6 +336,12 @@ async def initialize_defense_client():
         try:
             await defense_client.get_threats({"limit": 1})
             logger.info("Defense API client initialized successfully")
+        except httpx.HTTPStatusError as e:
+            error_details = format_http_error_message(e)
+            logger.error(f"Failed to connect to Defense API: {error_details}")
+            await defense_client.close()
+            defense_client = None
+            raise
         except Exception as e:
             logger.error(f"Failed to connect to Defense API: {e}")
             await defense_client.close()
@@ -364,11 +401,7 @@ async def get_biggest_risks() -> Dict[str, Any]:
         }
         
     except httpx.HTTPStatusError as e:
-        error_msg = f"API request failed: {e.response.status_code}"
-        if e.response.status_code == 401:
-            error_msg += " - Please check your API token"
-        elif e.response.status_code == 403:
-            error_msg += " - API token lacks required permissions"
+        error_msg = format_http_error_message(e)
         logger.error(error_msg)
         return {"error": error_msg, "threats": []}
     except Exception as e:
@@ -406,7 +439,10 @@ async def get_threat_to_remediate_first(days: int = 1) -> Dict[str, Any]:
         return threats_response.model_dump()
         
     except Exception as e:
-        error_msg = f"Failed to get threat to remediate first: {str(e)}"
+        if isinstance(e, httpx.HTTPStatusError):
+            error_msg = format_http_error_message(e)
+        else:
+            error_msg = f"Failed to get threat to remediate first: {str(e)}"
         logger.error(error_msg)
         return {"error": error_msg, "threats": []}
 
@@ -456,7 +492,10 @@ async def get_new_threats(days: int = 1) -> Dict[str, Any]:
         return response_dict
         
     except Exception as e:
-        error_msg = f"Failed to get new threats: {str(e)}"
+        if isinstance(e, httpx.HTTPStatusError):
+            error_msg = format_http_error_message(e)
+        else:
+            error_msg = f"Failed to get new threats: {str(e)}"
         logger.error(error_msg)
         return {"error": error_msg, "threats": []}
 
